@@ -1,0 +1,24 @@
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# Generated artifacts (models, results, plots)
+artifacts/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# GloVe vectors (large binary files)
+data/glove*.txt
+data/*.zip
