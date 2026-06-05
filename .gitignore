@@ -7,8 +7,9 @@ venv/
 .ipynb_checkpoints/
 notebooks/.ipynb_checkpoints/
 
-# Generated artifacts (models, results, plots)
-artifacts/
+# Generated artifacts — exclude large binary model files but keep plots and results
+artifacts/*.joblib
+artifacts/*.pkl
 
 # Python cache
 __pycache__/
