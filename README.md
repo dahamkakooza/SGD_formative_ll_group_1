@@ -8,6 +8,37 @@ one, or several of the 27 indicators at once. The primary metric is Hamming Loss
 (lower is better), with micro and macro F1, precision, and recall reported
 alongside it.
 
+## Demo Video
+
+[10 minute walkthrough](https://youtu.be/V8OPPQ_zWUI)
+
+## Results Summary
+
+We ran 10 controlled experiments, each varying one component (representation,
+model, balancing, or thresholding) so its effect could be isolated. All models
+use a One-vs-Rest (Binary Relevance) strategy with one binary classifier per
+indicator. Results are on the held-out validation set, sorted by Hamming Loss.
+
+| # | Representation | Model | Hamming Loss | Eval set |
+|---|----------------|-------|:------------:|----------|
+| 10 | Sentence-Transformer | LinearSVC + per-label thresholds | 0.0425 | Val-final (300) |
+| 6 | TF-IDF unigram | LR + per-label thresholds | 0.0443 | Val-final (300) |
+| **5** | **TF-IDF unigram** | **LinearSVC** | **0.0454** | **Val (599)** |
+| 9 | Sentence-Transformer | LinearSVC | 0.0475 | Val (599) |
+| 1 | Bag-of-words | LR (baseline) | 0.0522 | Val (599) |
+| 2 | Bag-of-words | LR + balanced weights | 0.0564 | Val (599) |
+| 4 | TF-IDF bigram | LR | 0.0572 | Val (599) |
+| 3 | TF-IDF unigram | LR | 0.0589 | Val (599) |
+| 8 | Sentence-Transformer | LR | 0.0960 | Val (599) |
+| 7 | GloVe (averaged) | LR | 0.1650 | Val (599) |
+
+**Experiment 5 (TF-IDF unigrams + LinearSVC, Hamming Loss 0.0454)** is our
+strongest directly-comparable model. Experiments 6 and 10 report lower values
+but are scored on a smaller held-out half used for threshold tuning, so they are
+not directly comparable; a controlled same-data study (in the notebook and
+report) shows threshold tuning helps the poorly-calibrated LR model but not the
+already-calibrated SVM. Full analysis is in the report.
+
 ## Project Structure
 
 ```
@@ -24,6 +55,14 @@ SGD_formative_ll_group_1/
 
 `artifacts/` is created when the notebook runs and is not committed (large model
 files are ignored in `.gitignore`).
+
+## Reproducibility
+
+A single random seed is fixed throughout the notebook (train/validation split,
+threshold-tuning split, and all model initialisation), so a top-to-bottom run is
+deterministic and reproduces the numbers in the Results Summary and the report.
+All vectorisers are fit on the training split only and applied unchanged to
+validation and test data, preventing information leakage.
 
 ## How to Run
 
@@ -83,6 +122,34 @@ There is a single notebook. Run it top to bottom; the sections run in order:
 
 The Sentence-Transformer and GloVe experiments are the slowest parts; the sparse
 TF-IDF and bag-of-words experiments run in seconds.
+
+## Generating Predictions
+
+Running the notebook top to bottom produces `artifacts/test_predictions.csv`
+(998 rows) in the same wide format as the training file: a `Unique ID` and
+`Type` column followed by `Label 1` … `Label 10`, where each cell holds a
+predicted SDG 3 indicator (or is blank).
+
+The best model and its components are saved during the run, so predictions can be
+reproduced without re-running training:
+
+```python
+import joblib
+
+clf = joblib.load('artifacts/best_classifier.joblib')   # trained One-vs-Rest model
+mlb = joblib.load('artifacts/label_binarizer.joblib')   # maps columns -> indicator names
+vec = joblib.load('artifacts/vectoriser.joblib')        # saved for sparse-feature models
+
+# preprocess_text() is defined in the notebook's preprocessing section.
+text     = preprocess_text("Programme to expand maternal and newborn health services...")
+features = vec.transform([text])
+pred_bin = clf.predict(features)
+indicators = mlb.inverse_transform(pred_bin)
+print(indicators)   # e.g. [('3.1.1 - Maternal mortality ratio', '3.8.1 - ...')]
+```
+
+For the Sentence-Transformer models, replace the vectoriser step with
+`st_model.encode([text])` instead of `vec.transform([text])`.
 
 ## Dataset
 
